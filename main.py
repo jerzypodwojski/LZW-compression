@@ -1,8 +1,7 @@
 def encoder(data):
-    maximum_table_size = 10000
-    dictionary_size = 256
+    dictionary_size = 65535
 
-    dictionary = ({chr(i): i for i in range(0x0, 0x10ffff)})
+    dictionary = ({chr(i): i for i in range(0, dictionary_size)})
 
     string = ""
     compressed_data = []
@@ -12,11 +11,10 @@ def encoder(data):
         if string_plus_symbol in dictionary:
             string = string_plus_symbol
         else:
-            compressed_data.append(dictionary[string])
-            if len(dictionary) <= maximum_table_size:
-                dictionary[string_plus_symbol] = dictionary_size
-                dictionary_size += 1
-            string = symbol
+            dictionary_size += 1
+            dictionary[string_plus_symbol] = dictionary_size
+            compressed_data.append(dictionary[string_plus_symbol[:-1]])
+            string = string_plus_symbol[-1]
 
     if string in dictionary:
         compressed_data.append(dictionary[string])
@@ -40,10 +38,9 @@ def encoder(data):
 
 
 def decoder(data, maxsize):
-    dictionary_size = 256
-    maximum_table_size = 10000
+    dictionary_size = 65535
 
-    dictionary = ({chr(i): i for i in range(0x0, 0x10ffff)})
+    dictionary = ({chr(i): i for i in range(0, dictionary_size)})
 
     binary_data = ''.join(format(i, '08b') for i in data)
 
@@ -55,23 +52,24 @@ def decoder(data, maxsize):
             decimal = decimal * 2 + int(digit)
         data_array.append(decimal)
 
+    keys_array = list(dictionary.keys())
+    values_array = list(dictionary.values())
     decompressed_data = ""
-    string = ""
+    first_num = ""
 
-    dictionary = {v: k for k, v in dictionary.items()}
     for index in data_array:
-        if index in dictionary:  # .values():
-            entry = dictionary[index]
-        elif index == dictionary_size:
-            entry = string + string[0]
-        else:
-            raise ValueError("Invalid compressed data")
-        decompressed_data += entry
-
-        if len(string) > 0 and dictionary_size < maximum_table_size:
-            dictionary[dictionary_size] = string + entry[0]
+        try:
+            second_num = first_num + keys_array[values_array.index(index)][0]
+        except:
+            second_num = first_num + first_num[0]
+        if index in values_array:
+            decompressed_data += keys_array[values_array.index(index)]
+        if index not in values_array:
+            decompressed_data += second_num
             dictionary_size += 1
-        string = entry
+            keys_array.append(second_num)
+            values_array.append(dictionary_size)
+        first_num = second_num
 
     output_file = open("decompressed_data.txt", "w", encoding="utf-8")
     output_file.write(decompressed_data)
