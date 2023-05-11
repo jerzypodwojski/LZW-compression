@@ -55,21 +55,21 @@ def decoder(data, maxsize):
     keys_array = list(dictionary.keys())
     values_array = list(dictionary.values())
     decompressed_data = ""
-    first_num = ""
+    second_num = data_array[0]
 
-    for index in data_array:
-        try:
-            second_num = first_num + keys_array[values_array.index(index)][0]
-        except:
-            second_num = first_num + first_num[0]
-        if index in values_array:
-            decompressed_data += keys_array[values_array.index(index)]
-        if index not in values_array:
-            decompressed_data += second_num
-            dictionary_size += 1
-            keys_array.append(second_num)
+    for i in range(len(data_array)):
+        first_num = data_array[i]
+        if first_num in values_array:
+            decompressed_data += keys_array[values_array.index(first_num)]
+            keys_array.append(keys_array[values_array.index(second_num)] + keys_array[values_array.index(first_num)][0])
             values_array.append(dictionary_size)
-        first_num = second_num
+            dictionary_size += 1
+        else:
+            decompressed_data += keys_array[values_array.index(second_num)] + keys_array[values_array.index(second_num)][0]
+            keys_array.append(keys_array[values_array.index(second_num)] + keys_array[values_array.index(second_num)][0])
+            values_array.append(dictionary_size)
+            dictionary_size += 1
+        second_num = first_num
 
     output_file = open("decompressed_data.txt", "w", encoding="utf-8")
     output_file.write(decompressed_data)
