@@ -1,18 +1,24 @@
-def encoder(data):
-    dictionary_size = 65535
+def get_key(val, my_dict):
+    for key, value in my_dict.items():
+        if val == value:
+            return key
 
-    dictionary = ({chr(i): i for i in range(0, dictionary_size)})
+
+def encoder(data):
+    dictionary_size = 256
+    max_dictionary_size = 5000
+    dictionary = dict({chr(i): i for i in range(0, dictionary_size)})
 
     string = ""
     compressed_data = []
-
     for symbol in data:
         string_plus_symbol = string + symbol
         if string_plus_symbol in dictionary:
             string = string_plus_symbol
         else:
-            dictionary_size += 1
-            dictionary[string_plus_symbol] = dictionary_size
+            if dictionary_size < max_dictionary_size:
+                dictionary_size += 1
+                dictionary[string_plus_symbol] = dictionary_size
             compressed_data.append(dictionary[string_plus_symbol[:-1]])
             string = string_plus_symbol[-1]
 
@@ -38,8 +44,8 @@ def encoder(data):
 
 
 def decoder(data, maxsize):
-    dictionary_size = 65535
-
+    dictionary_size = 256
+    max_dictionary_size = 5000
     dictionary = ({chr(i): i for i in range(0, dictionary_size)})
 
     binary_data = ''.join(format(i, '08b') for i in data)
@@ -52,33 +58,34 @@ def decoder(data, maxsize):
             decimal = decimal * 2 + int(digit)
         data_array.append(decimal)
 
-    keys_array = list(dictionary.keys())
-    values_array = list(dictionary.values())
     decompressed_data = ""
     second_num = data_array[0]
-
-    for i in range(len(data_array)):
-        first_num = data_array[i]
-        if first_num in values_array:
-            decompressed_data += keys_array[values_array.index(first_num)]
-            keys_array.append(keys_array[values_array.index(second_num)] + keys_array[values_array.index(first_num)][0])
-            values_array.append(dictionary_size)
-            dictionary_size += 1
+    for i in data_array:
+        first_num = i
+        if first_num in dictionary.values():
+            new_entry = get_key(first_num, dictionary)
+            new_entry2 = get_key(second_num, dictionary)
+            decompressed_data += new_entry
+            if dictionary_size < max_dictionary_size:
+                dictionary[new_entry2 + new_entry[0]] = dictionary_size
+                dictionary_size += 1
         else:
-            decompressed_data += keys_array[values_array.index(second_num)] + keys_array[values_array.index(second_num)][0]
-            keys_array.append(keys_array[values_array.index(second_num)] + keys_array[values_array.index(second_num)][0])
-            values_array.append(dictionary_size)
-            dictionary_size += 1
+            new_entry = get_key(second_num, dictionary) + get_key(second_num, dictionary)[0]
+            decompressed_data += new_entry
+            if dictionary_size < max_dictionary_size:
+                dictionary[new_entry] = dictionary_size
+                dictionary_size += 1
         second_num = first_num
 
-    output_file = open("decompressed_data.txt", "w", encoding="utf-8")
+    decompressed_data = eval("b'" + decompressed_data + "'")
+    output_file = open("decompressed_data.txt", "wb")
     output_file.write(decompressed_data)
 
 
 if __name__ == '__main__':
-    open_file = open("pan-tadeusz.txt", encoding="utf-8")
+    open_file = open("pan-tadeusz.txt", "rb")
     file_data = open_file.read()
-    encoder(file_data)
+    encoder(str(file_data)[2:-1])
 
     open_file = open("compressed_data.beka", "rb")
     bits_size = ord(open_file.read(1))
